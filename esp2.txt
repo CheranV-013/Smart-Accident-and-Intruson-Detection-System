@@ -1,0 +1,183 @@
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
+#include <Wire.h>
+#include <MPU6050.h>
+#include <SoftwareSerial.h>
+#include <TinyGPS++.h>
+#include <ESP_Mail_Client.h>
+#include <math.h>
+
+// ------------------- Wi-Fi Credentials -------------------
+#define WIFI_SSID     "iPhone"
+#define WIFI_PASSWORD "Cherancheran"
+
+// ------------------- Email Settings ----------------------
+#define SMTP_HOST "smtp.gmail.com"
+#define SMTP_PORT 587
+#define AUTHOR_EMAIL    "theche200699@gmail.com"
+#define AUTHOR_PASSWORD "qcowlajxzrxxoyvj"
+#define RECIPIENT_EMAIL "kit28.24bam013@gmail.com"
+
+// ------------------- UDP Attacker Settings ----------------
+WiFiUDP udp;
+const char* defenderIP = "172.20.10.3";  // Replace with ESP1 IP
+const int defenderPort = 4210;           // Must match ESP1 port
+
+// ------------------- Objects & Variables -----------------
+MPU6050 mpu;
+SMTPSession smtp;
+TinyGPSPlus gps;
+SoftwareSerial gpsSerial(D6, D7); // GPS: RX=D6, TX=D7
+
+const int ledPin = D4;
+const float ACC_THRESHOLD = 1.4; // G-force threshold
+
+double lastLat = 0.0;
+double lastLng = 0.0;
+bool gpsFixed = false;
+
+// ------------------- Spoofing Timer -------------------
+unsigned long lastSpoofTime = 0;
+const unsigned long spoofInterval = 15000; // 15 seconds
+
+void setup() {
+  Serial.begin(9600);
+  gpsSerial.begin(9600);
+
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  // ------------------- Connect to Wi-Fi -------------------
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\n✅ Connected to WiFi");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // ------------------- UDP Setup -------------------
+  udp.begin(defenderPort);
+  Serial.println("✅ Attacker UDP ready!");
+
+  // ------------------- Initialize MPU6050 -----------------
+  Wire.begin(D2, D1); // SDA=D2, SCL=D1
+  Wire.setClock(100000); // Optional: slow down I2C for stability
+  delay(100);
+  mpu.initialize();
+  if (mpu.testConnection()) {
+    Serial.println("✅ MPU6050 connected");
+  } else {
+    Serial.println("❌ MPU6050 connection failed");
+    while (1) {
+      Serial.println("Check wiring and 3.3V power!");
+      delay(2000);
+    }
+  }
+}
+
+void loop() {
+  // ------------ GPS Reading ------------
+  while (gpsSerial.available()) {
+    char c = gpsSerial.read();
+    gps.encode(c);
+
+    if (gps.location.isValid()) {
+      lastLat = gps.location.lat();
+      lastLng = gps.location.lng();
+      gpsFixed = true;
+    }
+  }
+
+  // ------------ Read MPU6050 Acceleration ------------
+  int16_t ax, ay, az;
+  mpu.getAcceleration(&ax, &ay, &az);
+
+  float gX = ax / 16384.0;
+  float gY = ay / 16384.0;
+  float gZ = az / 16384.0;
+  float totalG = sqrt(gX * gX + gY * gY + gZ * gZ);
+
+  // ------------ Accident Detection ------------
+  if (totalG > ACC_THRESHOLD) {
+    String direction = getImpactDirection(gX, gY, gZ);
+    Serial.println("🚨 Accident detected! Direction: " + direction);
+    digitalWrite(ledPin, HIGH);
+
+    String emailBody = "🚨 Accident Detected!\n\n";
+    emailBody += "gX: " + String(gX, 2) + "\n";
+    emailBody += "gY: " + String(gY, 2) + "\n";
+    emailBody += "gZ: " + String(gZ, 2) + "\n";
+    emailBody += "Total G: " + String(totalG, 2) + "\n";
+    emailBody += "Impact Direction: " + direction + "\n\n";
+
+    if (gpsFixed) {
+      emailBody += "📍 Location:\n";
+      emailBody += "Latitude: " + String(lastLat, 6) + "\n";
+      emailBody += "Longitude: " + String(lastLng, 6) + "\n";
+      emailBody += "Google Maps: https://www.google.com/maps?q=" + String(lastLat, 6) + "," + String(lastLng, 6) + "\n";
+    } else {
+      emailBody += "📍 GPS Location: Not Available\n";
+    }
+
+    sendEmail("🚨 Accident Alert", emailBody);
+    delay(5000); // Prevent multiple emails in rapid succession
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+
+  // ------------ Attacker Spoofing Every 10 Seconds ------------
+  if (millis() - lastSpoofTime >= spoofInterval) {
+    byte spoofedData[8] = {0xAA, 0xBB, 0xCC, 0xDD, 0x11, 0x22, 0x33, 0x44};
+    udp.beginPacket(defenderIP, defenderPort);
+    udp.write(spoofedData, sizeof(spoofedData));
+    udp.endPacket();
+
+    Serial.println("⚠️ Sent spoofed CAN message to ESP1!");
+    lastSpoofTime = millis();
+  }
+}
+
+// ------------------- Impact Direction -------------------
+String getImpactDirection(float gX, float gY, float gZ) {
+  String dir = "Unknown";
+  if (abs(gX) > abs(gY) && abs(gX) > abs(gZ)) {
+    dir = (gX > 0.5) ? "Right Side Dash" : "Left Side Dash";
+  } else if (abs(gY) > abs(gX) && abs(gY) > abs(gZ)) {
+    dir = (gY > 0.5) ? "Forward Dash" : "Backward Dash";
+  } else if (abs(gZ - 1.0) > 0.5) {
+    dir = (gZ > 1.5) ? "Upward Shock" : "Downward Shock";
+  }
+  return dir;
+}
+
+// ------------------- Send Email -------------------
+void sendEmail(String subject, String body) {
+  ESP_Mail_Session session;
+  session.server.host_name = SMTP_HOST;
+  session.server.port = SMTP_PORT;
+  session.login.email = AUTHOR_EMAIL;
+  session.login.password = AUTHOR_PASSWORD;
+  session.login.user_domain = "";
+  session.secure.startTLS = true;
+
+  if (!smtp.connect(&session)) {
+    Serial.println("❌ SMTP Connect Failed: " + smtp.errorReason());
+    return;
+  }
+
+  SMTP_Message message;
+  message.sender.name = "ESP8266 Accident Detector";
+  message.sender.email = AUTHOR_EMAIL;
+  message.subject = subject.c_str();
+  message.addRecipient("Recipient", RECIPIENT_EMAIL);
+  message.text.content = body.c_str();
+
+  if (!MailClient.sendMail(&smtp, &message)) {
+    Serial.println("❌ Error Sending Email: " + smtp.errorReason());
+  } else {
+    Serial.println("✅ Email Sent Successfully");
+  }
+}
