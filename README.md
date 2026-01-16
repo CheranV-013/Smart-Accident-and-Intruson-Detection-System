@@ -1,6 +1,6 @@
 # Smart-Accident-and-Intruson-Detection-System
 
-## 📌 Project Overview
+## Project Overview
 This project implements a **dual ESP8266–based smart vehicle safety system** that combines:
 
 - Accident Detection & Alerting  
@@ -15,7 +15,7 @@ The system uses **two ESP8266 nodes**:
 
 ---
 
-## 🛠️ Hardware Components Used
+## Hardware Components Used
 
 | Component | Purpose |
 |---------|--------|
@@ -29,7 +29,7 @@ The system uses **two ESP8266 nodes**:
 
 ---
 
-## 🔗 Software & Libraries Used
+## Software & Libraries Used
 
 - ESP8266WiFi  
 - WiFiUDP  
@@ -41,9 +41,9 @@ The system uses **two ESP8266 nodes**:
 
 ---
 
-## ⚙️ System Working
+## System Working
 
-### 🔹 ESP2 – Accident Detection & Spoofing Node
+### ESP2 – Accident Detection & Spoofing Node
 - Reads acceleration data from **MPU6050**
 - Detects accidents using a **G-force threshold**
 - Determines **impact direction**
@@ -51,7 +51,7 @@ The system uses **two ESP8266 nodes**:
 - Sends an **email alert** with accident & location details
 - Periodically sends **spoofed CAN messages via UDP** to ESP1
 
-### 🔹 ESP1 – Intrusion Detection (IDPS) Node
+### ESP1 – Intrusion Detection (IDPS) Node
 - Acts as a **UDP server**
 - Listens for incoming CAN packets
 - Detects **spoofed messages**
@@ -63,7 +63,7 @@ The system uses **two ESP8266 nodes**:
 
 ---
 
-## 📂 File Structure
+## File Structure
 
 Project/
 ├── esp1.ino # Intrusion Detection & Prevention (Defender Node)
@@ -73,7 +73,7 @@ Project/
 
 ---
 
-## 🚦 Key Features
+## Key Features
 
 - Accident detection using accelerometer  
 - Impact direction analysis  
@@ -86,7 +86,7 @@ Project/
 
 ---
 
-## 📧 Email Alert Includes
+## Email Alert Includes
 
 - Accident notification  
 - G-force values  
@@ -96,7 +96,7 @@ Project/
 
 ---
 
-## 🧪 Applications
+## Applications
 
 - Smart vehicle safety systems  
 - Automotive cybersecurity research  
@@ -106,19 +106,19 @@ Project/
 
 ---
 
-## ⚠️ Security Note
+## Security Note
 
 Sensitive information such as **Wi-Fi credentials and email passwords** should be secured before real-world deployment.
 
 ---
 
-## 👨‍💻 Developed By
+## Developed By
 
 **Cheran V**  
 2nd Year – Artificial Intelligence & Machine Learning  
 
 ---
 
-## 📜 License
+## License
 
 This project is developed for **educational and research purposes only**.
