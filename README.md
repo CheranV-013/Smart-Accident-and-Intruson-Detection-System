@@ -1,77 +1,124 @@
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
+# 🚗 IoT-Based Accident Detection & Intrusion Detection System (IDPS)
 
-const char* ssid = "iPhone";
-const char* password = "Cherancheran";
+## 📌 Project Overview
+This project implements a **dual ESP8266–based smart vehicle safety system** that combines:
 
-WiFiUDP udp;
-const int localPort = 4210;
+- Accident Detection & Alerting  
+- Intrusion Detection & Prevention (IDPS)  
+- Spoofed CAN Message Simulation  
+- Real-time GPS Location Tracking  
+- Email Alert System  
 
-const int alertLed = D4;   // LED for intrusion alert
-const int buzzerPin = D3;  // Optional buzzer
+The system uses **two ESP8266 nodes**:
+- **ESP1 (Defender / IDPS Node)** – Detects spoofed CAN messages and triggers alerts  
+- **ESP2 (Vehicle / Attacker Simulation Node)** – Detects accidents, sends alerts, and simulates spoofed CAN packets  
 
-IPAddress attackerIP;      // Store attacker's IP
+---
 
-void setup() {
-  Serial.begin(9600);
-  delay(1000);
+## 🛠️ Hardware Components Used
 
-  pinMode(alertLed, OUTPUT);
-  pinMode(buzzerPin, OUTPUT);
-  digitalWrite(alertLed, LOW);
-  digitalWrite(buzzerPin, LOW);
+| Component | Purpose |
+|---------|--------|
+| ESP8266 | Main microcontroller (ESP1 & ESP2) |
+| MPU6050 | Accident detection using acceleration |
+| NEO-6M GPS | Location tracking |
+| CAN Module | CAN message spoofing simulation |
+| SW-420 | Vibration / shock detection |
+| LED | Visual alert |
+| Buzzer | Audible alert |
 
-  Serial.println("\nConnecting to WiFi...");
-  WiFi.begin(ssid, password);
+---
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+## 🔗 Software & Libraries Used
 
-  Serial.println("\n✅ ESP1 connected to WiFi");
-  Serial.print("📡 ESP1 IP Address: ");
-  Serial.println(WiFi.localIP());
+- ESP8266WiFi  
+- WiFiUDP  
+- Wire  
+- MPU6050  
+- TinyGPS++  
+- ESP Mail Client  
+- SoftwareSerial  
 
-  udp.begin(localPort);
-  Serial.print("✅ UDP server started at port: ");
-  Serial.println(localPort);
-  Serial.println("📥 Waiting for spoofed attacker messages...");
-}
+---
 
-void loop() {
-  int packetSize = udp.parsePacket();
-  if (packetSize) {
-    byte buf[255];
-    int len = udp.read(buf, 255);
+## ⚙️ System Working
 
-    // Store attacker IP
-    attackerIP = udp.remoteIP();
+### 🔹 ESP2 – Accident Detection & Spoofing Node
+- Reads acceleration data from **MPU6050**
+- Detects accidents using a **G-force threshold**
+- Determines **impact direction**
+- Fetches **GPS coordinates**
+- Sends an **email alert** with accident & location details
+- Periodically sends **spoofed CAN messages via UDP** to ESP1
 
-    Serial.print("⚠️ Spoofed message received from ");
-    Serial.print(attackerIP);
-    Serial.print(": ");
+### 🔹 ESP1 – Intrusion Detection (IDPS) Node
+- Acts as a **UDP server**
+- Listens for incoming CAN packets
+- Detects **spoofed messages**
+- Logs **attacker IP address**
+- Triggers:
+  - LED alert  
+  - Buzzer warning  
+- Simulates **blocking the attacker**
 
-    for (int i = 0; i < len; i++) {
-      Serial.print(buf[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
+---
 
-    // ==== Trigger IDPS Response ====
-    digitalWrite(alertLed, HIGH); // Turn on LED
-    digitalWrite(buzzerPin, HIGH); // Start buzzer
-    delay(1000);
-    digitalWrite(buzzerPin, LOW);
+## 📂 File Structure
 
-    // Show warning
-    Serial.println("🚨 ALERT: Spoofed CAN message detected!");
-    Serial.println("⚠️ Taking defensive action...");
+Project/
+├── esp1.ino # Intrusion Detection & Prevention (Defender Node)
+├── esp2.ino # Accident Detection & Spoofing (Vehicle Node)
+└── README.md
 
-    // ==== Block Attacker IP (basic simulation) ====
-    Serial.print("⛔ Blocking attacker: ");
-    Serial.println(attackerIP);
-    delay(3000);
-    digitalWrite(alertLed, LOW);
-  }
-}
+
+---
+
+## 🚦 Key Features
+
+- Accident detection using accelerometer  
+- Impact direction analysis  
+- Real-time GPS tracking  
+- Email alerts with Google Maps link  
+- CAN spoofing attack simulation  
+- Intrusion detection with IP tracking  
+- LED & buzzer alerts  
+- Dual-node ESP8266 architecture  
+
+---
+
+## 📧 Email Alert Includes
+
+- Accident notification  
+- G-force values  
+- Impact direction  
+- Latitude & Longitude  
+- Google Maps navigation link  
+
+---
+
+## 🧪 Applications
+
+- Smart vehicle safety systems  
+- Automotive cybersecurity research  
+- CAN bus attack simulation  
+- IoT-based emergency response  
+- Academic projects & hackathons  
+
+---
+
+## ⚠️ Security Note
+
+Sensitive information such as **Wi-Fi credentials and email passwords** should be secured before real-world deployment.
+
+---
+
+## 👨‍💻 Developed By
+
+**Cheran V**  
+2nd Year – Artificial Intelligence & Machine Learning  
+
+---
+
+## 📜 License
+
+This project is developed for **educational and research purposes only**.
