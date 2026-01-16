@@ -1,4 +1,4 @@
-# 🚗 IoT-Based Accident Detection & Intrusion Detection System (IDPS)
+# Smart-Accident-and-Intruson-Detection-System
 
 ## 📌 Project Overview
 This project implements a **dual ESP8266–based smart vehicle safety system** that combines:
